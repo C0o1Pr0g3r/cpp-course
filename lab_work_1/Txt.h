@@ -15,6 +15,7 @@ namespace l1 {
         Txt(const std::string& filename = "");
         Txt(const Txt& other);
         Txt(Txt&& other);
+
         Txt& operator=(const Txt& other);
         Txt& operator=(Txt&& other);
 
