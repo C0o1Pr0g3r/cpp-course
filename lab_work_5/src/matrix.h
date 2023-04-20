@@ -33,7 +33,7 @@ public:
                 return this->_elements[0].size();
             break;
             default:
-                throw std::invalid_argument("An invalid argument was passed");
+                throw std::invalid_argument("An invalid value was passed for parameter 'dimension'");
         } 
     }
 
@@ -47,6 +47,8 @@ public:
                     row.resize(value);
                 }
             break;
+            default:
+                throw std::invalid_argument("An invalid value was passed for parameter 'dimension'");
         }
     }
 
@@ -56,7 +58,7 @@ public:
             case Dimension::ROW:
                 std::sort(this->_elements[index].begin(), this->_elements[index].end(), comp);
             break;
-            case Dimension::COLUMN:
+            case Dimension::COLUMN: {
                 std::vector<value_type> tmp(this->_elements.size());
 
                 for (size_type i = 0; i < this->_elements.size(); ++i) {
@@ -68,7 +70,10 @@ public:
                 for (size_type i = 0; i < this->_elements.size(); ++i) {
                     this->_elements[i][index] = tmp[i];
                 }
+            }
             break;
+            default:
+                throw std::invalid_argument("An invalid value was passed for parameter 'dimension'");
         }
     }
     
@@ -106,7 +111,7 @@ private:
     Matrix _perform_mathematical_operation_with_matrix(const Matrix& other, value_type operation(const U& a, const U& b)) {
         if (
             this->_elements.size() != other._elements.size()
-            &&
+            ||
             this->_elements[0].size() != other._elements[0].size()
         ) {
             throw std::length_error("Matrix sizes do not match");
