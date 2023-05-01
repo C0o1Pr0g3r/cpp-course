@@ -24,7 +24,7 @@ public:
         COLUMN
     };
 
-    size_type size(Dimension dimension) {
+    size_type size(Dimension dimension) const {
         switch (dimension) {
             case Dimension::ROW:
                 return this->_elements.size();
@@ -85,11 +85,11 @@ public:
         return this->_elements[index.first][index.second];
     }
 
-    Matrix operator+(const Matrix& other) {
+    Matrix operator+(const Matrix& other) const {
         return _perform_mathematical_operation_with_matrix(other, sum<value_type>);
     }
 
-    Matrix operator-(const Matrix& other) {
+    Matrix operator-(const Matrix& other) const {
         return _perform_mathematical_operation_with_matrix(other, difference<value_type>);
     }
 
@@ -104,11 +104,11 @@ public:
     {}
 
     template<class U>
-    friend void printMatrix(std::ostream& out, const Matrix<U>& matrix, std::string delimiter);
+    friend void print_matrix(std::ostream& out, const Matrix<U>& matrix, std::string delimiter);
 
 private:
     template<class U>
-    Matrix _perform_mathematical_operation_with_matrix(const Matrix& other, value_type operation(const U& a, const U& b)) {
+    Matrix _perform_mathematical_operation_with_matrix(const Matrix& other, value_type operation(const U& a, const U& b)) const {
         if (
             this->_elements.size() != other._elements.size()
             ||
@@ -134,7 +134,7 @@ private:
 };
 
 template<class U>
-void printMatrix(std::ostream& out, const Matrix<U>& matrix, std::string delimiter) {
+void print_matrix(std::ostream& out, const Matrix<U>& matrix, std::string delimiter) {
     for (const auto& row: matrix._elements) {
         for (std::size_t i = 0; i < row.size(); ++i) {
             out << row[i];
@@ -148,19 +148,20 @@ void printMatrix(std::ostream& out, const Matrix<U>& matrix, std::string delimit
 
 template<class U, std::enable_if_t<!std::is_integral<U>::value, bool> = true>
 std::ostream& operator<<(std::ostream& out, const Matrix<U>& matrix) {
-    printMatrix(out, matrix, " | ");
+    print_matrix(out, matrix, " | ");
 
     return out;
 }
 
 template<class U, std::enable_if_t<std::is_integral<U>::value, bool> = true>
 std::ostream& operator<<(std::ostream& out, const Matrix<U>& matrix) {
-    printMatrix(out, matrix, "; ");
+    print_matrix(out, matrix, "; ");
 
     return out;
 }
 
+// Explicit specialization
 template<>
-Matrix<std::string> Matrix<std::string>::operator-(const Matrix<std::string>& other) = delete;
+Matrix<std::string> Matrix<std::string>::operator-(const Matrix<std::string>& other) const = delete;
 
 #endif // MATRIX_H_INCLUDED
