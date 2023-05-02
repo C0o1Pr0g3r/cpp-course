@@ -8,7 +8,9 @@ template
 class Matrix<std::string>;
 
 template<class T>
-void test_addition_of_matrices_of_different_sizes(const Matrix<T>& a, const Matrix<T>& b);
+void test_addition_of_matrices_of_different_sizes(
+    const Matrix<T>& a, const Matrix<T>& b
+);
 
 template<class T>
 void test_access_to_matrix_elements(Matrix<T>& matrix);
@@ -23,7 +25,9 @@ template<class T>
 void test_matrix_resizing(Matrix<T>& matrix);
 
 template<class T>
-void test_subtraction_of_matrices_of_the_same_size(const Matrix<T>& a, const Matrix<T>& b);
+void test_subtraction_of_matrices_of_the_same_size(
+    const Matrix<T>& a, const Matrix<T>& b
+);
 
 template<class T>
 void test_getting_matrix_rank(const Matrix<T>& matrix);
@@ -71,7 +75,9 @@ int main() {
 
 
 template<class T>
-void test_addition_of_matrices_of_different_sizes(const Matrix<T>& a, const Matrix<T>& b) {
+void test_addition_of_matrices_of_different_sizes(
+    const Matrix<T>& a, const Matrix<T>& b
+) {
     std::cout << "1. Trying to add matrices of different sizes"
         << " (deliberate attempt to catch an exception)"
         << std::endl;
@@ -113,14 +119,15 @@ void test_sorting_of_matrix_column(Matrix<T>& matrix) {
     const std::size_t column_number_to_sort = 5;
     std::cout
         << "4. Trying to sort column " << column_number_to_sort
-        << " with custom comparator" << std::endl;
+        << " with custom comparator (in descending order)" << std::endl;
     std::cout
         << "Matrix before sorting column number " << column_number_to_sort
         << std::endl;
     std::cout << matrix << std::endl;
     matrix.sort(Matrix<T>::Dimension::COLUMN, column_number_to_sort - 1,
         [](const T& a, const T& b) { return a > b; });
-    std::cout << "Matrix after sorting column number " << column_number_to_sort << std::endl;
+    std::cout << "Matrix after sorting column number "
+        << column_number_to_sort << std::endl;
     std::cout << matrix << std::endl;
 }
 
@@ -145,7 +152,9 @@ std::cout << "5. Trying to resize a matrix" << std::endl;
 }
 
 template<class T>
-void test_subtraction_of_matrices_of_the_same_size(const Matrix<T>& a, const Matrix<T>& b) {
+void test_subtraction_of_matrices_of_the_same_size(
+    const Matrix<T>& a, const Matrix<T>& b
+) {
     std::cout << "6. Trying to subtract matrices of the same size" << std::endl;
     std::cout << "First matrix:" << std::endl;
     std::cout << a << std::endl;

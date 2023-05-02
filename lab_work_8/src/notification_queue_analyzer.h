@@ -16,14 +16,15 @@ public:
             << this->number_of_launches + 1 << std::endl;
 
         if (this->number_of_launches > 0) {
-            this->ofs
-                << std::endl << std::endl << std::endl << std::endl << std::endl;
+            this->ofs << std::endl << std::endl<< std::endl
+                << std::endl << std::endl;
         }
 
         this->ofs << "Running the queue analyzer #"
         << this->number_of_launches + 1 << std::endl << std::endl;
 
-        this->ofs << "Queued notifications (not necessarily stored in order of priority):"
+        this->ofs << "Queued notifications"
+            " (not necessarily stored in order of priority):"
             << std::endl;
         for (const auto& element: notification_queue) {
             this->ofs << element << std::endl;
@@ -60,7 +61,8 @@ public:
         number_of_launches(0)
     {
         if (!this->ofs.is_open()) {
-            std::cerr << "The queue analyzer could not open the file" << std::endl;
+            std::cerr
+                << "The queue analyzer could not open the file" << std::endl;
         }
     }
 
@@ -72,7 +74,9 @@ public:
 
 private:
     template<class T, std::size_t N>
-    void print_current_date_and_time(const NotificationQueue<T, N>& notification_queue) {
+    void print_current_date_and_time(
+        const NotificationQueue<T, N>& notification_queue
+    ) {
         this->ofs << "1. Current date and time: "
         << get_current_date_and_time() << std::endl;
         this->ofs << std::endl;
@@ -103,7 +107,8 @@ private:
             ++number_of_messages_per_urgency_level
                 .at(static_cast<std::size_t>(element.level_of_urgency()));
         }
-        this->ofs << "3. Percentage of messages with different levels of urgency:"
+        this->ofs
+            << "3. Percentage of messages with different levels of urgency:"
             << std::endl;
         for (std::size_t i = 0;
             i < static_cast<std::size_t>(Notification<T>::LevelOfUrgency::SIZE);

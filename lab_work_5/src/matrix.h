@@ -33,7 +33,9 @@ public:
                 return this->_elements[0].size();
             break;
             default:
-                throw std::invalid_argument("An invalid value was passed for parameter 'dimension'");
+                throw std::invalid_argument(
+                    "An invalid value was passed for parameter 'dimension'"
+                );
         } 
     }
 
@@ -48,15 +50,25 @@ public:
                 }
             break;
             default:
-                throw std::invalid_argument("An invalid value was passed for parameter 'dimension'");
+                throw std::invalid_argument(
+                    "An invalid value was passed for parameter 'dimension'"
+                );
         }
     }
 
     template<class Compare = std::less<const_reference>>
-    void sort(Dimension dimension, size_type index, Compare comp = std::less<const_reference>()) {
+    void sort(
+        Dimension dimension,
+        size_type index,
+        Compare comp = std::less<const_reference>()
+    ) {
         switch (dimension) {
             case Dimension::ROW:
-                std::sort(this->_elements[index].begin(), this->_elements[index].end(), comp);
+                std::sort(
+                    this->_elements[index].begin(),
+                    this->_elements[index].end(),
+                    comp
+                );
             break;
             case Dimension::COLUMN: {
                 std::vector<value_type> tmp(this->_elements.size());
@@ -73,7 +85,9 @@ public:
             }
             break;
             default:
-                throw std::invalid_argument("An invalid value was passed for parameter 'dimension'");
+                throw std::invalid_argument(
+                    "An invalid value was passed for parameter 'dimension'"
+                );
         }
     }
     
@@ -86,11 +100,15 @@ public:
     }
 
     Matrix operator+(const Matrix& other) const {
-        return _perform_mathematical_operation_with_matrix(other, sum<value_type>);
+        return _perform_mathematical_operation_with_matrix(
+            other, sum<value_type>
+        );
     }
 
     Matrix operator-(const Matrix& other) const {
-        return _perform_mathematical_operation_with_matrix(other, difference<value_type>);
+        return _perform_mathematical_operation_with_matrix(
+            other, difference<value_type>
+        );
     }
 
     Matrix()
@@ -104,11 +122,16 @@ public:
     {}
 
     template<class U>
-    friend void print_matrix(std::ostream& out, const Matrix<U>& matrix, std::string delimiter);
+    friend void print_matrix(
+        std::ostream& out, const Matrix<U>& matrix, std::string delimiter
+    );
 
 private:
     template<class U>
-    Matrix _perform_mathematical_operation_with_matrix(const Matrix& other, value_type operation(const U& a, const U& b)) const {
+    Matrix _perform_mathematical_operation_with_matrix(
+        const Matrix& other,
+        value_type operation(const U& a, const U& b)
+    ) const {
         if (
             this->_elements.size() != other._elements.size()
             ||
@@ -123,7 +146,9 @@ private:
         for (size_type i = 0; i < this->_elements.size(); ++i) {
             result._elements[i].resize(this->_elements[i].size());
             for (size_type j = 0; j < this->_elements[0].size(); ++j) {
-                result._elements[i][j] = operation(this->_elements[i][j], other._elements[i][j]);
+                result._elements[i][j] = operation(
+                    this->_elements[i][j], other._elements[i][j]
+                );
             }
         }
 
@@ -134,7 +159,9 @@ private:
 };
 
 template<class U>
-void print_matrix(std::ostream& out, const Matrix<U>& matrix, std::string delimiter) {
+void print_matrix(
+    std::ostream& out, const Matrix<U>& matrix, std::string delimiter
+) {
     for (const auto& row: matrix._elements) {
         for (std::size_t i = 0; i < row.size(); ++i) {
             out << row[i];
@@ -162,6 +189,8 @@ std::ostream& operator<<(std::ostream& out, const Matrix<U>& matrix) {
 
 // Explicit specialization
 template<>
-Matrix<std::string> Matrix<std::string>::operator-(const Matrix<std::string>& other) const = delete;
+Matrix<std::string> Matrix<std::string>::operator-(
+    const Matrix<std::string>& other
+) const = delete;
 
 #endif // MATRIX_H_INCLUDED

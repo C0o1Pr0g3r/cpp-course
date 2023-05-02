@@ -7,7 +7,9 @@
 
 
 template<class Clock>
-std::string convert_time_point_to_iso_date(const std::chrono::time_point<Clock>& tp) {
+std::string convert_time_point_to_iso_date(
+    const std::chrono::time_point<Clock>& tp
+) {
     const std::time_t t{std::chrono::system_clock::to_time_t(tp)};
     const std::size_t MAX_SIZE = 128;
     char buffer[MAX_SIZE];

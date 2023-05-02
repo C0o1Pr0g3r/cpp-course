@@ -101,7 +101,8 @@ private:
         size_type length_before_queue_clearing = this->length;
         this->length = get_the_index_of_last_valid_notification();
         std::cout
-            << "Number of invalid notifications removed when clearing the full queue: "
+            << "Number of invalid notifications removed"
+            " when clearing the full queue: "
             << length_before_queue_clearing - this->length
             << std::endl
             << "Number of notifications left in the queue: " << this->length
@@ -111,7 +112,9 @@ private:
     void move_invalid_notifications_to_the_end() {
         std::stable_sort(
             this->begin(), this->end(),
-            [](const value_type& a, const value_type& b) { return a.is_still_valid() > b.is_still_valid(); }
+            [](const value_type& a, const value_type& b) {
+                return a.is_still_valid() > b.is_still_valid();
+            }
         );
     }
 
