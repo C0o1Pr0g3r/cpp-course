@@ -1,9 +1,6 @@
 #include <cstddef>
 #include <array>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
-#include <functional>
 
 #include "notification.h"
 #include "notification_queue.h"
@@ -11,119 +8,11 @@
 
 
 using MessageType = std::size_t;
+using Duration = std::chrono::milliseconds;
+using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
-Notification<MessageType> generate_notification();
-
-std::chrono::milliseconds get_elapsed_time(
-    const std::chrono::time_point<std::chrono::system_clock>& starting_point
-);
-
-std::chrono::milliseconds get_shorter_duration(
-    const std::chrono::milliseconds& a, const std::chrono::milliseconds& b
-);
-
-std::tuple<bool, std::chrono::milliseconds> continue_running_thread(
-    const std::chrono::time_point<std::chrono::system_clock>& starting_point,
-    const std::chrono::milliseconds& how_long_should_thread_sleep
-);
-
-void perform_operation_thread_safely(std::function<void ()> operation);
-
-template<class T, std::size_t N>
-void add_to_or_remove_from_notification_queue_randomly(
-    NotificationQueue<T, N>& notification_queue
-);
-
-template<class T, std::size_t N>
-void remove_notifications_from_queue_every_second(
-    NotificationQueue<T, N>& notification_queue
-);
-
-template<class T, std::size_t N>
-void run_notification_queue_analyzer(
-    NotificationQueue<T, N>& notification_queue,
-    NotificationQueueAnalyzer& notification_queue_analyzer
-);
-
-
-const std::chrono::milliseconds HOW_LONG_SHOULD_THE_PROGRAM_RUN =
-    std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::minutes(5)
-);
-
-std::mutex m;
+const Duration HOW_LONG_SHOULD_PROGRAM_RUN = std::chrono::minutes(5);
 std::condition_variable cv;
-bool is_it_time_to_run_analyzer = false;
-
-
-int main() {
-    const auto starting_point = std::chrono::system_clock::now();
-    const std::size_t QUEUE_CAPACITY = 10;
-
-    NotificationQueue<MessageType, QUEUE_CAPACITY> notification_queue;
-    NotificationQueueAnalyzer notification_queue_analyzer;
-
-
-    const int NUMBER_OF_ADDING_AND_REMOVING_THREADS = 3;
-    std::array<
-        std::thread, NUMBER_OF_ADDING_AND_REMOVING_THREADS
-    > adding_and_removing_threads {
-        std::thread(
-            add_to_or_remove_from_notification_queue_randomly<
-                MessageType, QUEUE_CAPACITY
-            >,
-            std::ref(notification_queue)
-        ),
-        std::thread(
-            add_to_or_remove_from_notification_queue_randomly<
-                MessageType, QUEUE_CAPACITY
-            >,
-            std::ref(notification_queue)
-        ),
-        std::thread(
-            add_to_or_remove_from_notification_queue_randomly<
-                MessageType, QUEUE_CAPACITY
-            >,
-            std::ref(notification_queue)
-        ),
-    };
-    std::thread only_removing_thread(
-        remove_notifications_from_queue_every_second<
-            MessageType, QUEUE_CAPACITY
-        >,
-        std::ref(notification_queue)
-    );
-    std::thread thread_analysing_the_queue(
-        run_notification_queue_analyzer<MessageType, QUEUE_CAPACITY>,
-        std::ref(notification_queue),
-        std::ref(notification_queue_analyzer)
-    );
-
-    for (auto& thread: adding_and_removing_threads) {
-        thread.join();
-    }
-    only_removing_thread.join();
-    thread_analysing_the_queue.join();
-
-    std::cout
-        << "Number of calls to the 'analyze' method"
-        " of the 'notification_queue_analyzer' object: "
-        << notification_queue_analyzer.get_number_of_launches()
-        << std::endl;
-
-    const auto end_point = std::chrono::system_clock::now();
-
-    std::cout
-        << "Program execution time: "
-        << std::chrono::duration_cast<std::chrono::minutes>(
-            end_point - starting_point).count() << " minutes ("
-        << std::chrono::duration_cast<std::chrono::milliseconds>(
-            end_point - starting_point).count() << " milliseconds)"
-        << std::endl;
-
-    return 0;
-}
-
 
 Notification<MessageType> generate_notification() {
     static int number_of_notifications = 0;
@@ -133,117 +22,86 @@ Notification<MessageType> generate_notification() {
             generate_number_in_range_inclusive(0, static_cast<int>(
                 Notification<MessageType>::LevelOfUrgency::SIZE) - 1
         )),
-        std::chrono::system_clock::now() + std::chrono::seconds(
-            generate_number_in_range_inclusive(-3600, 3600)
+        std::chrono::system_clock::now() + std::chrono::hours(
+            generate_number_in_range_inclusive(-2, 2)
         ),
         number_of_notifications++
     );
 }
 
-std::chrono::milliseconds get_elapsed_time(
-    const std::chrono::time_point<std::chrono::system_clock>& starting_point
+std::tuple<bool, Duration> terminate_thread(
+    const TimePoint& start_time,
+    const Duration& how_long_should_thread_sleep
 ) {
-    return std::chrono::duration_cast<
-        std::chrono::milliseconds
-    >(
-        std::chrono::system_clock::now() - starting_point
-    );
-}
-
-std::chrono::milliseconds get_shorter_duration(
-    const std::chrono::milliseconds& a, const std::chrono::milliseconds& b
-) {
-    return std::min(a, b);
-}
-
-std::tuple<bool, std::chrono::milliseconds> continue_running_thread(
-    const std::chrono::time_point<std::chrono::system_clock>& starting_point,
-    const std::chrono::milliseconds& how_long_should_thread_sleep
-) {
-    auto remaining_time =
-        HOW_LONG_SHOULD_THE_PROGRAM_RUN - get_elapsed_time(starting_point);
-    return std::tuple<bool, std::chrono::milliseconds>(
+    Duration remaining_time =
+        HOW_LONG_SHOULD_PROGRAM_RUN - std::chrono::duration_cast<Duration>(
+            std::chrono::system_clock::now() - start_time
+        );
+    return std::tuple<bool, Duration>(
         remaining_time > std::chrono::milliseconds(0),
-        get_shorter_duration(how_long_should_thread_sleep, remaining_time)
+        std::min(how_long_should_thread_sleep, remaining_time)
     );
 }
 
-void perform_operation_thread_safely(std::function<void ()> operation) {
-    std::lock_guard<std::mutex> lock(m);
-    operation();
-}
-
 template<class T, std::size_t N>
-void add_to_or_remove_from_notification_queue_randomly(
+void add_and_remove_notification(
     NotificationQueue<T, N>& notification_queue
 ) {
-    const auto starting_point = std::chrono::system_clock::now();
+    const auto start_time = std::chrono::system_clock::now();
 
-    while (true) {
-        perform_operation_thread_safely([&]() {
-            std::cout << "Thread ID: " << std::this_thread::get_id()
-                << "(adding and removing notifications)"
-                << std::endl;
-            if (static_cast<bool>(generate_number_in_range_inclusive(0, 1))) {
-                notification_queue.push(generate_notification());
-                if (notification_queue.completely_filled()) {
-                    is_it_time_to_run_analyzer = true;
-                    cv.notify_one();
-                }
-            } else {
-                notification_queue.get_out_of();
+    while (true) {      
+        if (static_cast<bool>(generate_number_in_range_inclusive(0, 1))) {
+            notification_queue.push(generate_notification());
+            if (notification_queue.completely_filled()) {
+                cv.notify_one();
             }
-            std::cout << std::endl;
-        });
-
-        auto how_long_should_thread_sleep = std::chrono::milliseconds(
-            generate_number_in_range_inclusive(10, 500)
-        );
-
-        bool continue_execution;
-        std::chrono::milliseconds remaining_time;
-        std::tie(continue_execution, remaining_time) = continue_running_thread(
-            starting_point, how_long_should_thread_sleep
-        );
-
-        if (!continue_execution) {
-            return;
+        } else {
+            notification_queue.get_out_of();
         }
 
-        std::this_thread::sleep_for(remaining_time);
-    }
-}
+        auto how_long_should_thread_sleep = Duration(
+            std::chrono::milliseconds(generate_number_in_range_inclusive(10, 500))
+        );
 
-template<class T, std::size_t N>
-void remove_notifications_from_queue_every_second(
+        Duration remaining_time =
+            HOW_LONG_SHOULD_PROGRAM_RUN - std::chrono::duration_cast<Duration>(
+                std::chrono::system_clock::now() - start_time
+        );
+
+        if (remaining_time <= Duration(0)) {
+            return;
+        }
+        
+        const auto time_to_sleep = std::min(
+            how_long_should_thread_sleep, remaining_time
+        );
+
+        std::this_thread::sleep_for(time_to_sleep);
+    }
+}template<class T, std::size_t N>
+void remove_notification(
     NotificationQueue<T, N>& notification_queue
 ) {
-    const auto starting_point = std::chrono::system_clock::now();
-    const auto HOW_LONG_SHOULD_THREAD_SLEEP =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::seconds(1)
-    );
+    const auto start_time = std::chrono::system_clock::now();
+    const Duration HOW_LONG_SHOULD_THREAD_SLEEP = std::chrono::seconds(1);
 
-    while (true) {
-        perform_operation_thread_safely([&]() {
-            std::cout << "Thread ID: " << std::this_thread::get_id()
-                << "(only removing notifications)"
-                << std::endl;
-            notification_queue.get_out_of();
-            std::cout << std::endl;
-        });
+    while (true) {    
+        notification_queue.get_out_of();
 
-        bool continue_execution;
-        std::chrono::milliseconds remaining_time;
-        std::tie(continue_execution, remaining_time) = continue_running_thread(
-            starting_point, HOW_LONG_SHOULD_THREAD_SLEEP
+        Duration remaining_time =
+            HOW_LONG_SHOULD_PROGRAM_RUN - std::chrono::duration_cast<Duration>(
+                std::chrono::system_clock::now() - start_time
         );
 
-        if (!continue_execution) {
+        if (remaining_time <= Duration(0)) {
             return;
         }
+        
+        const auto time_to_sleep = std::min(
+            HOW_LONG_SHOULD_THREAD_SLEEP, remaining_time
+        );
 
-        std::this_thread::sleep_for(remaining_time);
+        std::this_thread::sleep_for(time_to_sleep);
     }
 }
 
@@ -252,49 +110,96 @@ void run_notification_queue_analyzer(
     NotificationQueue<T, N>& notification_queue,
     NotificationQueueAnalyzer& notification_queue_analyzer
 ) {
-    const auto starting_point = std::chrono::system_clock::now();
-    const auto HOW_LONG_SHOULD_THREAD_SLEEP =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::minutes(1)
-    );
+    const auto start_time = std::chrono::system_clock::now();
+    const Duration HOW_LONG_SHOULD_THREAD_SLEEP = std::chrono::minutes(1);
 
     while (true) {
-        bool continue_execution;
-        std::chrono::milliseconds remaining_time;
-        std::tie(continue_execution, remaining_time) = continue_running_thread(
-            starting_point, HOW_LONG_SHOULD_THREAD_SLEEP
+        Duration remaining_time =
+            HOW_LONG_SHOULD_PROGRAM_RUN - std::chrono::duration_cast<Duration>(
+                std::chrono::system_clock::now() - start_time
         );
 
-        if (!continue_execution) {
+        if (remaining_time <= Duration(0)) {
             return;
         }
+        
+        const auto time_to_sleep = std::min(
+            HOW_LONG_SHOULD_THREAD_SLEEP, remaining_time
+        );
 
-        std::unique_lock<std::mutex> lock(m);
+        std::unique_lock<std::mutex> lock(notification_queue.get_mutex());
 
-        if (cv.wait_for(
-            lock,
-            remaining_time,
-            []{
-                return is_it_time_to_run_analyzer;
-            })
-        ) {
-            std::cout << "The queue analyzer started because"
-                " 1 minute has passed since the previous run" << std::endl;
-        } else {
+        std::cv_status status = cv.wait_for(lock, time_to_sleep);
+        
+        switch (status) {
+        case std::cv_status::no_timeout:
             std::cout << "The queue analyzer started because the queue was full"
                 << std::endl;
+            break;
+        case std::cv_status::timeout:
+            std::cout << "The queue analyzer started because"
+                " 1 minute has passed since the previous run" << std::endl;
+            break;
         }
-        
-        std::cout << "Thread ID: " << std::this_thread::get_id()
-                << "(launching the analyzer)"
-                << std::endl;
 
         notification_queue_analyzer.analyze(notification_queue);
 
-        is_it_time_to_run_analyzer = false;
-        
-        std::cout << std::endl;
-
         lock.unlock();
     }
+}
+
+
+int main() {
+    const auto start_time = std::chrono::system_clock::now();
+
+    const std::size_t QUEUE_CAPACITY = 10;
+    const std::size_t NUMBER_OF_THREADS = 5;
+    NotificationQueue<MessageType, QUEUE_CAPACITY> notification_queue;
+    NotificationQueueAnalyzer notification_queue_analyzer;
+    std::array<std::thread, NUMBER_OF_THREADS> threads {
+        std::thread(
+            add_and_remove_notification<MessageType, QUEUE_CAPACITY>,
+            std::ref(notification_queue)
+        ),
+        std::thread(
+            add_and_remove_notification<MessageType, QUEUE_CAPACITY>,
+            std::ref(notification_queue)
+        ),
+        std::thread(
+            add_and_remove_notification<MessageType, QUEUE_CAPACITY>,
+            std::ref(notification_queue)
+        ),
+        std::thread(
+            remove_notification<MessageType, QUEUE_CAPACITY>,
+            std::ref(notification_queue)
+        ),
+        std::thread(
+            run_notification_queue_analyzer<MessageType, QUEUE_CAPACITY>,
+            std::ref(notification_queue),
+            std::ref(notification_queue_analyzer)
+        ),
+    };
+
+    for (auto& thread: threads) {
+        thread.join();
+    }
+
+    std::cout
+        << "Number of calls to the 'analyze' method"
+        " of the 'notification_queue_analyzer' object: "
+        << notification_queue_analyzer.get_number_of_launches()
+        << std::endl;
+
+    const auto running_time = std::chrono::system_clock::now() - start_time;
+
+    std::cout
+        << "Program execution time: "
+        << std::chrono::duration_cast<std::chrono::minutes>(
+            running_time).count() << " minutes ("
+        << std::chrono::duration_cast<std::chrono::milliseconds>(
+            running_time).count() << " milliseconds)"
+        << std::endl;
+    
+
+    return 0;
 }

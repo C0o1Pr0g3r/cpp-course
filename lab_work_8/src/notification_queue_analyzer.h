@@ -7,7 +7,7 @@
 class NotificationQueueAnalyzer {
 public:
     template<class T, std::size_t N>
-    void analyze(const NotificationQueue<T, N>& notification_queue) {
+    void analyze(NotificationQueue<T, N>& notification_queue) {
         if (!this->ofs.is_open()) {
             return;
         }

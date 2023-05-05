@@ -4,6 +4,9 @@
 #include <iostream>
 #include <algorithm>
 #include <tuple>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 
 template<class T, std::size_t N>
@@ -20,33 +23,40 @@ public:
     bool empty() const { return this->size() == 0; }
     bool completely_filled() const { return this->size() == this->capacity(); }
 
+    std::mutex& get_mutex() { return this->m; }
+
     void push(const value_type& value) {
+        std::lock_guard lock(this->m);
+
         this->try_to_remove_invalid_notifications_if_queue_is_full();
         if (this->completely_filled()) {
             std::cout << "The queue is full." << std::endl;
             return;
         }
-        *this->end() = value;
-        ++this->length;
+        this->add_element(value);
         std::cout << "The notification added." << std::endl;
     }
 
     void push(value_type&& value) {
+        std::lock_guard lock(this->m);
+
         this->try_to_remove_invalid_notifications_if_queue_is_full();
         if (this->completely_filled()) {
             std::cout << "The queue is full." << std::endl;
             return;
         }
-        *this->end() = std::move(value);
-        ++this->length;
+        this->add_element(std::forward<value_type&&>(value));
         std::cout << "The notification added." << std::endl;
     }
 
     std::tuple<bool, value_type> get_out_of() {
+        std::lock_guard lock(this->m);
+        
         while (!this->empty()) {
-            auto element_it = find_notification_with_maximum_priority();
+            const auto element_it = std::max_element(this->begin(), this->end());
             const value_type element = *element_it;
-            remove_element(element_it);
+            std::copy(element_it + 1, this->end(), element_it);
+            --this->length;
             if (element.is_still_valid()) {
                 std::cout << "Valid notification removed." << std::endl;
                 return std::tuple<bool, value_type>(true, element);
@@ -54,35 +64,58 @@ public:
                 std::cout << "Invalid notification removed." << std::endl;
             }
         }
-
-        std::cout
-            << "An attempt to receive a notification failed"
+        
+        std::cout << "An attempt to receive a notification failed"
             " because there were no valid notifications in the queue."
             << std::endl;
 
         return std::tuple<bool, value_type>(false, Notification<T>());
     }
 
+    template<class U, std::size_t V>
+    friend std::ostream& operator<<(
+        std::ostream& out, const NotificationQueue<U, V>& notification_queue
+    );
+
     NotificationQueue()
     :   container(),
-        length(0)
+        length(0),
+        m()
     {}
 
     ~NotificationQueue() {}
-
-    void print() {
-        for (const auto& element: *this) {
-            std::cout << element << std::endl;
-        }
-        std::cout << std::endl;
-    }
-
 private:
     using iterator = typename std::array<value_type, N>::iterator;
     using const_iterator = typename std::array<value_type, N>::const_iterator;
 
+    typename std::array<value_type, N>::iterator begin() {
+        return this->container.begin();
+    }
+
+    typename std::array<value_type, N>::const_iterator end() const {
+        return this->container.begin() + this->length;
+    }
+
+    typename std::array<value_type, N>::const_iterator begin() const {
+        return this->container.begin();
+    }
+
+    typename std::array<value_type, N>::iterator end() {
+        return this->container.begin() + this->length;
+    }
+
     iterator find_notification_with_maximum_priority() {
         return std::max_element(this->begin(), this->end());
+    }
+
+    void add_element(const value_type& value) {
+        *this->end() = value;
+        ++this->length;
+    }
+
+    void add_element(value_type&& value) {
+        *this->end() = std::move(value);
+        ++this->length;
     }
 
     void remove_element(iterator &it) {
@@ -97,19 +130,12 @@ private:
     }
 
     void remove_invalid_notifications() {
-        move_invalid_notifications_to_the_end();
+        move_invalid_notifications_to_end();
         size_type length_before_queue_clearing = this->length;
         this->length = get_the_index_of_last_valid_notification();
-        std::cout
-            << "Number of invalid notifications removed"
-            " when clearing the full queue: "
-            << length_before_queue_clearing - this->length
-            << std::endl
-            << "Number of notifications left in the queue: " << this->length
-            << std::endl;
     }
 
-    void move_invalid_notifications_to_the_end() {
+    void move_invalid_notifications_to_end() {
         std::stable_sort(
             this->begin(), this->end(),
             [](const value_type& a, const value_type& b) {
@@ -125,24 +151,20 @@ private:
         ) - this->begin();
     }
 
-    iterator begin() {
-        return this->container.begin();
-    }
-
-    const_iterator end() const {
-        return this->container.begin() + this->length;
-    }
-
-    const_iterator begin() const {
-        return this->container.begin();
-    }
-
-    iterator end() {
-        return this->container.begin() + this->length;
-    }
-
     std::array<value_type, N> container;
     size_type length;
+    std::mutex m;
 };
+
+template<class U, std::size_t V>
+std::ostream& operator<<(
+    std::ostream& out, const NotificationQueue<U, V>& notification_queue
+) {
+    for (const auto& element: notification_queue) {
+        out << element << std::endl;
+    }
+
+    return out;
+}
 
 #endif // NOTIFICATION_QUEUE_H_INCLUDED

@@ -72,8 +72,7 @@ private:
 
 template<class T>
 std::array<
-    std::string,
-    static_cast<std::size_t>(Notification<T>::LevelOfUrgency::SIZE)
+    std::string, static_cast<std::size_t>(Notification<T>::LevelOfUrgency::SIZE)
 > Notification<T>::_levels_of_urgency {
     "LOW",
     "MEDIUM",
